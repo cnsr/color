@@ -5,8 +5,9 @@ import sys
 a = sys.argv
 
 if '-h' in a:
-    print('Example of usage: "python color.py in.jpg 10"\
-            \nReturns 10 most common colors of in.jpg')
+    print('Example of usage: "python color.py in.jpg 10 10"\
+            \nReturns 10 most common colors of in.jpg with +-10 color similarity in rgb\
+            \nDecrease threshold and increase maximum amount of colors to get more colors.')
     sys.exit()
 else:
     try:
@@ -20,6 +21,10 @@ else:
         max_colors = int(a[2])
     except (IndexError, ValueError):
         max_colors = 10
+    try:
+        threshold = int(a[3])
+    except (IndexError, ValueError):
+        threshold = 12
 
 # get average color of the whole image
 def color(location, res):
@@ -42,6 +47,20 @@ def avg(band):
     return int(sum(a*b for a, b in enumerate(band)) / sum(band))
 
 
+def luminance(pixel):
+    r,g,b = pixel
+    return (0.299*r + 0.587*g +  0.114*b)
+
+
+# compare two colors to find out if they are similar
+def is_similar(col1, col2, threshold=12):
+    return abs(luminance(col1) - luminance(col2)) < threshold
+
+def black_white(col):
+    black = (0,0,0)
+    white = (255,255,255)
+    return is_similar(col, black, 12) or is_similar(col, white, 12)
+
 # n most common colors in an image
 def most_common(location, max_colors):
     try:
@@ -51,8 +70,29 @@ def most_common(location, max_colors):
         sys.exit()
     w, h = im.size
     img_sz = w * h
+    # multiplied by two we can compare colors and have some leftovers
     colors = sorted(im.getcolors(maxcolors=img_sz), key=lambda x: x[0])[max_colors*-1:]
     colors = list(reversed(colors))
+    # color comparison
+    for color in colors:
+        if black_white(color[-1]):
+            colors.remove(color)
+    for color1 in colors:
+        for color2 in colors:
+            if not color1 == color2:
+                # could pass threshold here
+                if is_similar(color1[-1], color2[-1], threshold):
+                    if color1[0] > color2[0]:
+                        colors.remove(color2)
+                    else:
+                        try:
+                            colors.remove(color1)
+                        # not in list (?)
+                        except ValueError:
+                            pass
+    colors = colors[:max_colors]
+    if len(colors) < max_colors:
+        max_colors = len(colors)
     new = Image.new('RGB', (100*max_colors, 140)) # add rows = 140 * rows
     draw = ImageDraw.Draw(new)
     for color in colors:
