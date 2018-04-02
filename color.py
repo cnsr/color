@@ -56,10 +56,13 @@ def luminance(pixel):
 def is_similar(col1, col2, threshold=12):
     return abs(luminance(col1) - luminance(col2)) < threshold
 
+
+# checks if color is too close to black or white
 def black_white(col):
-    black = (0,0,0)
+    black = (3,3,3) # not actually black since black would give 0 luminance
     white = (255,255,255)
     return is_similar(col, black, 12) or is_similar(col, white, 12)
+
 
 # n most common colors in an image
 def most_common(location, max_colors):
@@ -70,8 +73,9 @@ def most_common(location, max_colors):
         sys.exit()
     w, h = im.size
     img_sz = w * h
+    max_col_sz = int(img_sz / 1000 * -1)
     # multiplied by two we can compare colors and have some leftovers
-    colors = sorted(im.getcolors(maxcolors=img_sz), key=lambda x: x[0])[max_colors*-1:]
+    colors = sorted(im.getcolors(maxcolors=img_sz), key=lambda x: x[0])[max_col_sz:]
     colors = list(reversed(colors))
     # color comparison
     for color in colors:
@@ -93,18 +97,30 @@ def most_common(location, max_colors):
     colors = colors[:max_colors]
     if len(colors) < max_colors:
         max_colors = len(colors)
-    new = Image.new('RGB', (100*max_colors, 140)) # add rows = 140 * rows
+    if max_colors <= 10: rows = 1
+    elif max_colors > 10 and max_colors <= 20: rows = 2
+    else:
+        rows = int(max_colors // 10)
+        if max_colors % 10 != 0: rows+=1
+    max_x = max_colors
+    if max_x > 10: max_x = 10
+    new = Image.new('RGB', (100*max_x, 140 * rows))
     draw = ImageDraw.Draw(new)
+    row = 0
     for color in colors:
-        x0 = colors.index(color) * 100
+        x0 = colors.index(color) * 100 - row * 1100
+        y0 = row * 140
+        if x0 > 999:
+            row += 1
+        y1 = y0 + 100
         x1 = x0 + 100
-        y0 = 0
-        y1 = 100
         draw.rectangle([x0, y0, x1, y1], fill=color[-1])
         text = str(color[-1]) + '\n' + rgb_to_hex(color[-1]) + '\n' + str(color[0]) +' times'
         draw.text((x0, y1),text=text, align='center')
     del draw
     new.save('out.png')
+    print('Done.')
+    sys.exit()
 
 def rgb_to_hex(rgb):
     r,g,b = rgb
