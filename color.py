@@ -1,6 +1,7 @@
 from PIL import Image, ImageDraw
 import binascii
 import sys
+import config
 
 a = sys.argv
 
@@ -20,11 +21,11 @@ else:
     try:
         max_colors = int(a[2])
     except (IndexError, ValueError):
-        max_colors = 10
+        max_colors = config.max_colors
     try:
         threshold = int(a[3])
     except (IndexError, ValueError):
-        threshold = 12
+        threshold = config.threshold
 
 # get average color of the whole image
 def color(location, res):
@@ -61,7 +62,7 @@ def is_similar(col1, col2, threshold=12):
 def black_white(col):
     black = (3,3,3) # not actually black since black would give 0 luminance
     white = (255,255,255)
-    return is_similar(col, black, 12) or is_similar(col, white, 12)
+    return is_similar(col, black, 24) or is_similar(col, white, 24)
 
 
 # n most common colors in an image
