@@ -1,6 +1,7 @@
 from PIL import Image, ImageDraw
 import binascii
 import sys
+from operator import itemgetter
 
 a = sys.argv
 
@@ -64,6 +65,13 @@ def black_white(col):
     return is_similar(col, black, 12) or is_similar(col, white, 12)
 
 
+def sort_by_luminance(colors):
+    ret = []
+    for color in colors:
+        lum = luminance(color[-1])
+        ret.append((color[0], round(lum, 2), color[-1]))
+    return sorted(ret, key=itemgetter(1))
+
 # n most common colors in an image
 def most_common(location, max_colors):
     try:
@@ -107,6 +115,10 @@ def most_common(location, max_colors):
     new = Image.new('RGB', (100*max_x, 140 * rows))
     draw = ImageDraw.Draw(new)
     row = 0
+    #print('*' * 20)
+    #print(sort_by_luminance(colors))
+    colors = sort_by_luminance(colors)
+    print(colors)
     for color in colors:
         x0 = colors.index(color) * 100 - row * 1100
         y0 = row * 140
