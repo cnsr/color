@@ -2,50 +2,30 @@ from PIL import Image, ImageDraw
 import binascii
 import sys
 from operator import itemgetter
+import argparse
 
-a = sys.argv
 
-if '-h' in a:
-    print('Example of usage: "python color.py in.jpg 10 10"\
-            \nReturns 10 most common colors of in.jpg with +-10 color similarity in rgb\
-            \nDecrease threshold and increase maximum amount of colors to get more colors.')
-    sys.exit()
-else:
-    try:
-        if not a[1].lower().endswith(('jpg','png','jpeg')):
-            location = 'in.jpg'
-        else:
-            location = a[1]
-    except IndexError:
-        location = 'in.jpg'
-    try:
-        max_colors = int(a[2])
-    except (IndexError, ValueError):
-        max_colors = 10
-    try:
-        threshold = int(a[3])
-    except (IndexError, ValueError):
+def setup():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-s", "--sort", help="sort colors from darker to lighter", action="store_true", default=False,
+                        dest='sort')
+    parser.add_argument('image', type=str, help="choose input image, default value is use in.jpg")
+    parser.add_argument('-m', action="store", dest="max_colors", type=int, help="Amount of colors you want to receive\
+    (less than 20). Defaults to 10.")
+    parser.add_argument('-t', action="store", dest="threshold", type=int, help="Color comparison threshold, lesser value means\
+    more different colors. Defaults to 12")
+    a = parser.parse_args()
+    location = a.image
+    max_colors = a.max_colors
+    threshold = a.threshold
+
+    if not location.lower().endswith(('jpg','png','jpeg')):
+        raise Exception('Unsupported filetype.')
+    if not threshold:
         threshold = 12
-
-# get average color of the whole image
-def color(location, res):
-    im = Image.open(location)
-    hist = im.histogram()
-    if len(hist) > 256:
-        r = hist[:256]
-        g = hist[256:512]
-        b = hist[512:768]
-        if res == 'avg':
-            return 'red: {0}\ngreen: {1}\nblue: {2}'.format(avg(r), avg(g),avg(b))
-        else:
-            return 'rgb({0},{1},{2})'.format(avg(r), avg(g),avg(b))
-    else:
-        return avg(hist)
-
-
-# average color of band
-def avg(band):
-    return int(sum(a*b for a, b in enumerate(band)) / sum(band))
+    if not max_colors:
+        max_colors = 10
+    return (location, max_colors, threshold, a.sort)
 
 
 def luminance(pixel):
@@ -73,7 +53,7 @@ def sort_by_luminance(colors):
     return sorted(ret, key=itemgetter(1))
 
 # n most common colors in an image
-def most_common(location, max_colors):
+def most_common(location, max_colors, threshold, sort=False):
     try:
         im = Image.open(location).convert('RGB')
     except FileNotFoundError:
@@ -115,10 +95,8 @@ def most_common(location, max_colors):
     new = Image.new('RGB', (100*max_x, 140 * rows))
     draw = ImageDraw.Draw(new)
     row = 0
-    #print('*' * 20)
-    #print(sort_by_luminance(colors))
-    colors = sort_by_luminance(colors)
-    print(colors)
+    if sort:
+        colors = sort_by_luminance(colors)
     for color in colors:
         x0 = colors.index(color) * 100 - row * 1100
         y0 = row * 140
@@ -138,4 +116,13 @@ def rgb_to_hex(rgb):
     r,g,b = rgb
     return '#%02x%02x%02x' % (r,g,b)
 
-most_common(location, max_colors)
+def main():
+    try:
+        location, max_colors, threshold, sort = setup()
+        most_common(location, max_colors, threshold, sort)
+    except Exception as e:
+        print(e)
+        sys.exit()
+
+if __name__ == '__main__':
+    main()
